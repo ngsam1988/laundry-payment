@@ -1,0 +1,8 @@
+{
+  "name": "laundry-payment",
+  "version": "1.0.0",
+  "description": "Cashless laundry payment system",
+  "scripts": {
+    "dev": "vercel dev"
+  }
+}
