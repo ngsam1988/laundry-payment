@@ -1,24 +1,16 @@
-// api/payment-webhook.js
 export default async function handler(req, res) {
-  // 验证 X-Signature
-  const receivedSignature = req.headers['x-signature'];
-  const { id, paid_at, state, reference_1, reference_2 } = req.body;
-  
-  // 这里可以验证签名
-  // const expectedSignature = crypto.createHmac('sha256', process.env.BILLPLZ_X_SIGNATURE_KEY).update(JSON.stringify(req.body)).digest('hex');
-  
-  if (state === 'paid') {
-    console.log(`✅ Payment received for order: ${reference_1}, machine: ${reference_2}`);
+  // 接收 Billplz 的 webhook 通知
+  if (req.method === 'POST') {
+    const { id, paid_at, state, reference_1, reference_2 } = req.body;
     
-    // 获取订单信息中的模式
-    // 这里需要从数据库或直接解析 mode
+    console.log('Webhook received:', { id, state, reference_1, reference_2 });
     
-    // 发送命令到 ESP32
-    const mode = 'cold'; // 需要从数据库获取
-    const coins = { cold: 7, warm: 8, hot: 9 }[mode];
-    const esp32Ip = process.env.ESP32_IP_1;
-    
-    if (esp32Ip) {
+    if (state === 'paid') {
+      // 支付成功，通知 ESP32 启动
+      const esp32Ip = process.env.ESP32_IP_1 || '192.168.0.153';
+      const mode = 'cold'; // 需要从 reference 中解析
+      const coins = 7;
+      
       try {
         await fetch(`http://${esp32Ip}/start?mode=${mode}&coins=${coins}`);
         console.log('✅ ESP32 started');
@@ -26,7 +18,12 @@ export default async function handler(req, res) {
         console.error('Failed to start ESP32:', err);
       }
     }
+    
+    res.status(200).send('OK');
   }
   
-  res.status(200).send('OK');
+  if (req.method === 'GET') {
+    // 检查支付状态
+    res.json({ paid: false });
+  }
 }
