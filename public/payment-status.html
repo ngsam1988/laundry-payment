@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Payment Status</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 50px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .card {
+            background: white;
+            border-radius: 30px;
+            padding: 40px;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        .success { color: #4CAF50; }
+        .failed { color: #f44336; }
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div id="status">
+            <div class="loader"></div>
+            <h2>Processing payment...</h2>
+        </div>
+    </div>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const billplzId = urlParams.get('billplz_id');
+        const paid = urlParams.get('paid');
+        
+        if (paid === 'true') {
+            document.getElementById('status').innerHTML = `
+                <div class="success">
+                    <h1>✅ Payment Successful!</h1>
+                    <p>Your laundry machine is starting...</p>
+                    <p>Redirecting in 3 seconds...</p>
+                </div>
+            `;
+            setTimeout(() => {
+                window.location.href = 'https://laundry-payment.vercel.app';
+            }, 3000);
+        } else if (paid === 'false') {
+            document.getElementById('status').innerHTML = `
+                <div class="failed">
+                    <h1>❌ Payment Failed</h1>
+                    <p>Please try again.</p>
+                    <a href="/">Go back</a>
+                </div>
+            `;
+        }
+        
+        // 每2秒检查支付状态
+        if (billplzId) {
+            const checkInterval = setInterval(async () => {
+                const res = await fetch(`/api/check-payment?billplz_id=${billplzId}`);
+                const data = await res.json();
+                if (data.paid === true) {
+                    clearInterval(checkInterval);
+                    document.getElementById('status').innerHTML = `
+                        <div class="success">
+                            <h1>✅ Payment Successful!</h1>
+                            <p>Your laundry machine is starting...</p>
+                        </div>
+                    `;
+                }
+            }, 2000);
+        }
+    </script>
+</body>
+</html>
