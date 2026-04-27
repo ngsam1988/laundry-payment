@@ -1,34 +1,148 @@
-<script>
-const machineId = 1;
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Laundry Payment</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;}
+        body{
+            font-family:'Segoe UI',Arial;
+            background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);
+            min-height:100vh;
+            padding:20px;
+        }
+        .card{
+            background:white;
+            border-radius:30px;
+            padding:30px;
+            max-width:450px;
+            margin:0 auto;
+            box-shadow:0 20px 40px rgba(0,0,0,0.1);
+        }
+        h1{color:#333;margin-bottom:10px;font-size:28px;text-align:center;}
+        .machine-id{text-align:center;color:#666;margin-bottom:30px;}
+        .btn{
+            width:100%;
+            padding:20px;
+            margin:10px 0;
+            font-size:18px;
+            font-weight:bold;
+            border:none;
+            border-radius:20px;
+            cursor:pointer;
+            transition:transform 0.2s;
+        }
+        .btn:active{transform:scale(0.98);}
+        .cold{background:#4CAF50;color:white;}
+        .warm{background:#FF9800;color:white;}
+        .hot{background:#F44336;color:white;}
+        .price{float:right;}
+        .phone-input{
+            width:100%;
+            padding:15px;
+            margin:15px 0;
+            font-size:16px;
+            border:2px solid #e5e7eb;
+            border-radius:15px;
+            box-sizing:border-box;
+        }
+        .loading{
+            text-align:center;
+            padding:20px;
+            display:none;
+        }
+        .loader{
+            border:3px solid #f3f3f3;
+            border-top:3px solid #667eea;
+            border-radius:50%;
+            width:40px;
+            height:40px;
+            animation:spin 1s linear infinite;
+            margin:0 auto;
+        }
+        @keyframes spin{
+            0%{transform:rotate(0deg);}
+            100%{transform:rotate(360deg);}
+        }
+        .footer{
+            text-align:center;
+            color:#999;
+            margin-top:20px;
+            font-size:12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>🧺 Laundry Machine</h1>
+        <div class="machine-id">Machine #<span id="machineId">1</span></div>
+        
+        <input type="tel" id="phone" class="phone-input" 
+               placeholder="📱 Phone number for receipt">
+        
+        <button class="btn cold" onclick="pay('cold')">
+            ❄️ Cold Wash <span class="price">RM7</span>
+        </button>
+        <button class="btn warm" onclick="pay('warm')">
+            🌡️ Warm Wash <span class="price">RM8</span>
+        </button>
+        <button class="btn hot" onclick="pay('hot')">
+            🔥 Hot Wash <span class="price">RM9</span>
+        </button>
+        
+        <div id="loading" class="loading">
+            <div class="loader"></div>
+            <p style="margin-top:10px;">Creating payment...</p>
+        </div>
+        
+        <div class="footer">
+            💰 Pay online to start
+        </div>
+    </div>
 
-async function pay(mode) {
-  const phone = document.getElementById('phone').value;
-  if (!phone) {
-    alert('请输入手机号');
-    return;
-  }
-  
-  document.getElementById('loading').style.display = 'block';
-  
-  try {
-    const response = await fetch('/api/create-payment', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ machineId, mode, userPhone: phone })
-    });
-    
-    const data = await response.json();
-    
-    if (data.paymentUrl) {
-      // 跳转到 Billplz 支付页面
-      window.location.href = data.paymentUrl;
-    } else {
-      alert('创建支付失败: ' + (data.error || 'Unknown error'));
-    }
-  } catch (error) {
-    alert('网络错误: ' + error.message);
-  } finally {
-    document.getElementById('loading').style.display = 'none';
-  }
-}
-</script>
+    <script>
+        const machineId = new URLSearchParams(window.location.search).get('machine') || '1';
+        document.getElementById('machineId').textContent = machineId;
+        
+        async function pay(mode) {
+            const phone = document.getElementById('phone').value;
+            if (!phone) {
+                alert('Please enter your phone number');
+                return;
+            }
+            
+            if (!phone.match(/^[0-9]{9,11}$/)) {
+                alert('Please enter a valid phone number (9-11 digits)');
+                return;
+            }
+            
+            document.getElementById('loading').style.display = 'block';
+            
+            try {
+                const response = await fetch('/api/create-payment', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        machineId: parseInt(machineId),
+                        mode: mode,
+                        userPhone: phone
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.paymentUrl) {
+                    window.location.href = data.paymentUrl;
+                } else {
+                    alert('Error: ' + (data.error || 'Unknown error'));
+                    document.getElementById('loading').style.display = 'none';
+                }
+            } catch (error) {
+                alert('Network error: ' + error.message);
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>
