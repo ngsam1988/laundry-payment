@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Payment Status</title>
+    <title>Payment Status - Laundry</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -11,22 +11,26 @@
             padding: 50px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
         .card {
             background: white;
             border-radius: 30px;
             padding: 40px;
             max-width: 500px;
-            margin: 0 auto;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
         }
-        .success { color: #4CAF50; }
-        .failed { color: #f44336; }
+        .success { color: #4CAF50; font-size: 48px; }
+        .pending { color: #FF9800; }
         .loader {
             border: 3px solid #f3f3f3;
             border-top: 3px solid #667eea;
             border-radius: 50%;
-            width: 40px;
-            height: 40px;
+            width: 50px;
+            height: 50px;
             animation: spin 1s linear infinite;
             margin: 20px auto;
         }
@@ -34,57 +38,69 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        .btn {
+            background: #4CAF50;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            margin-top: 20px;
+            font-size: 16px;
+        }
     </style>
 </head>
 <body>
     <div class="card">
-        <div id="status">
+        <div id="content">
             <div class="loader"></div>
-            <h2>Processing payment...</h2>
+            <h2 class="pending">Processing your payment...</h2>
+            <p>Please wait while we confirm your payment.</p>
         </div>
     </div>
 
     <script>
+        // 获取 URL 参数
         const urlParams = new URLSearchParams(window.location.search);
         const billplzId = urlParams.get('billplz_id');
-        const paid = urlParams.get('paid');
+        const billplzPaid = urlParams.get('paid');
         
-        if (paid === 'true') {
-            document.getElementById('status').innerHTML = `
-                <div class="success">
-                    <h1>✅ Payment Successful!</h1>
-                    <p>Your laundry machine is starting...</p>
-                    <p>Redirecting in 3 seconds...</p>
-                </div>
+        // 检查是否从 Billplz 返回
+        if (billplzPaid === 'true') {
+            document.getElementById('content').innerHTML = `
+                <div class="success">✅</div>
+                <h2 style="color:#4CAF50;">Payment Successful!</h2>
+                <p>Your laundry machine is starting now.</p>
+                <p>The machine will begin washing shortly.</p>
+                <button class="btn" onclick="window.location.href='https://laundry-payment.vercel.app/'">Return</button>
             `;
-            setTimeout(() => {
-                window.location.href = 'https://laundry-payment.vercel.app';
-            }, 3000);
-        } else if (paid === 'false') {
-            document.getElementById('status').innerHTML = `
-                <div class="failed">
-                    <h1>❌ Payment Failed</h1>
-                    <p>Please try again.</p>
-                    <a href="/">Go back</a>
-                </div>
+            
+            // 通知 ESP32 启动
+            fetch('/api/start-machine', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    key: 'laundry123',
+                    mode: 'cold',
+                    coins: 7,
+                    machineId: 1
+                })
+            }).catch(err => console.error('Error:', err));
+            
+        } else if (billplzPaid === 'false') {
+            document.getElementById('content').innerHTML = `
+                <div style="color:#f44336;font-size:48px;">❌</div>
+                <h2 style="color:#f44336;">Payment Failed</h2>
+                <p>Your payment was not completed.</p>
+                <button class="btn" style="background:#f44336;" onclick="window.location.href='https://laundry-payment.vercel.app/'">Try Again</button>
             `;
-        }
-        
-        // 每2秒检查支付状态
-        if (billplzId) {
-            const checkInterval = setInterval(async () => {
-                const res = await fetch(`/api/check-payment?billplz_id=${billplzId}`);
-                const data = await res.json();
-                if (data.paid === true) {
-                    clearInterval(checkInterval);
-                    document.getElementById('status').innerHTML = `
-                        <div class="success">
-                            <h1>✅ Payment Successful!</h1>
-                            <p>Your laundry machine is starting...</p>
-                        </div>
-                    `;
-                }
-            }, 2000);
+        } else {
+            // 没有参数，显示通用信息
+            document.getElementById('content').innerHTML = `
+                <h2>Payment Status</h2>
+                <p>If you made a payment, it is being processed.</p>
+                <button class="btn" onclick="window.location.href='https://laundry-payment.vercel.app/'">Back to Machine</button>
+            `;
         }
     </script>
 </body>
